@@ -1,0 +1,144 @@
+---
+title: E-commerce
+---
+erDiagram
+    CUSTORMERS {
+        string id PK
+        string email
+        string name
+        string date_of_brith
+        string phone_number
+        string address
+        string type
+        integer loyalty_points
+    }
+
+    CARDS {
+        integer id PK
+        integer cutomer_id FK
+        string pan
+        string expiry_date
+        string cvv
+        bool   is_default
+    }
+
+    VOUCHERS {
+        string serial PK
+        integer customer_id FK
+        float amount
+    }
+
+    BASKET_ITEMS {
+        integer customer_id FK
+        intger item_id FK
+        integer quantity
+    }
+
+    PRODUCTS {
+        integer id PK
+        string name
+        string description
+        string brand
+        string colour
+        string dimensions
+        string weight
+        float price
+        integer n_days_warranty
+        string category
+        integer stock_count
+        integer seller_code FK
+    }
+
+    SELLERS {
+        integer code PK
+        string address
+        string  name
+        string tax_id
+        string rating
+    }
+
+    REVIEWS {
+        integer id PK
+        integer product_id FK
+        string description
+        integer score
+    }
+
+    PROMOTIONS {
+        integer amount_from_total
+        integer product_id FK
+    }
+
+    ORDER_ITEMS {
+        integer order_id FK
+        integer product_id FK
+        integer quantity
+    }
+
+    ORDERS {
+        integr id
+        integer basket_id FK
+        integer customer_id FK
+        string date
+        float amount_total
+
+    }
+
+    PAYMENTS {
+        integer txn_id PK
+        integer order_id FK
+        integer card_id FK
+        integer voucher_id FK
+        string payment_method 
+        integer amount
+        string status
+        string date
+    }
+
+    DELIVERIES {
+        integer order_id FK
+        integer tracking_number
+    }
+
+    RETURNS {
+        integer id PK
+        integer order_id FK
+        integer ticket_number
+        integer tracking_number
+        string start_date
+        string due_date
+        float refund_total
+        string status
+    }
+
+  RETURN_ITEMS {
+        integer return_id FK
+        intger product_id FK
+        integer quantity
+    }
+  
+  CUSTORMERS ||--o{ CARDS: pay_with
+  CUSTORMERS ||--o{ VOUCHERS: pay_with
+  CUSTORMERS ||--|{ BASKET_ITEMS: products_in
+  CUSTORMERS ||--o{ ORDERS: place
+  
+  BASKET_ITEMS }|--|| PRODUCTS: contains
+
+  PRODUCTS }|--|| SELLERS: are_sold_by
+  PRODUCTS ||--o{ REVIEWS: have
+  PRODUCTS |o--|{ ORDER_ITEMS: are_in
+  PRODUCTS |o--|{ RETURN_ITEMS: are_in
+  PRODUCTS ||--o| PROMOTIONS: have
+  
+  ORDERS ||--o| DELIVERIES: have
+  ORDERS ||--o| RETURNS: have
+  ORDERS ||--|{ ORDER_ITEMS: contain 
+  ORDERS ||--|| PAYMENTS: have
+
+  PAYMENTS ||--o| CARDS: paid_by
+  PAYMENTS ||--o| VOUCHERS: paid_by
+
+  RETURNS ||--|{ RETURN_ITEMS: contain
+
+
+  

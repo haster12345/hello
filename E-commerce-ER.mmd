@@ -4,7 +4,7 @@ title: E-commerce
 erDiagram
     CUSTORMERS {
         string id PK
-        string email
+        string email UK
         string name
         string date_of_brith
         string phone_number
@@ -65,6 +65,7 @@ erDiagram
     }
 
     PROMOTIONS {
+        integer id
         integer amount_from_total
         integer product_id FK
     }
@@ -77,7 +78,6 @@ erDiagram
 
     ORDERS {
         integr id
-        integer basket_id FK
         integer customer_id FK
         string date
         float amount_total

@@ -4,7 +4,6 @@ SELECT
   c.email,
   o.id AS order_id,
   o.order_date,
-  o.payment_status,
   o.amount_total,
   p.name AS product_name,
   p.price AS product_price,
@@ -16,7 +15,9 @@ FROM
   JOIN products p on oi.product_id = p.id
   JOIN payments pa ON o.id = pa.order_id
   AND pa.status = 'paid'
-  OR pa.status = 'pending';
+  OR pa.status = 'pending'
+LIMIT
+  10;
 
 -- 5.2 Basket analysis
 SELECT
@@ -26,19 +27,19 @@ SELECT
   v.amount AS voucher_amount,
   p.name AS product_name
 FROM
-  basket b
+  basket_items b
   JOIN customers c ON b.customer_id = c.id
   JOIN products p ON b.product_id = p.id
-  JOIN vouchers v ON c.id = v.customer_id;
+  LEFT JOIN vouchers v ON c.id = v.customer_id
+LIMIT
+  10;
 
 -- 5.3 Top products in every category by revenue
--- need to add average rating and return rate
 WITH
   product_revenue AS (
     SELECT
       p.category AS product_category,
       p.name AS product_name,
-      p.stock_count AS product_stock_count,
       SUM(oi.quantity * p.price) AS revenue
     FROM
       orders o
@@ -47,14 +48,12 @@ WITH
     GROUP BY
       p.id,
       p.category,
-      p.name,
-      p.stock_count
+      p.name
   ),
   ranked_products AS (
     SELECT
       product_category,
       product_name,
-      product_stock_count,
       revenue,
       ROW_NUMBER() OVER (
         PARTITION BY
@@ -68,7 +67,6 @@ WITH
 SELECT
   product_category,
   product_name,
-  product_stock_count,
   revenue
 FROM
   ranked_products

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS cards (
 CREATE TABLE IF NOT EXISTS payments (
   txn_id INTEGER PRIMARY KEY,
   order_id INTEGER,
+  voucher_serial TEXT,
   payment_method TEXT,
   amount REAL,
   status TEXT,
@@ -54,7 +55,7 @@ CREATE TABLE IF NOT EXISTS products (
   FOREIGN KEY (seller_code) REFERENCES sellers (code)
 );
 
-CREATE TABLE IF NOT EXISTS basket (
+CREATE TABLE IF NOT EXISTS basket_items (
   customer_id INTEGER,
   product_id INTEGER,
   quantity INTEGER,
@@ -75,6 +76,15 @@ CREATE TABLE IF NOT EXISTS reviews (
   product_id INTEGER,
   description TEXT,
   score INTEGER,
+  FOREIGN KEY (product_id) REFERENCES products (id)
+);
+
+CREATE TABLE IF NOT EXISTS promotions (
+  id INTEGER PRIMARY KEY,
+  product_id INTEGER,
+  amount_off_total REAL,
+  start_date TEXT,
+  end_date TEXT,
   FOREIGN KEY (product_id) REFERENCES products (id)
 );
 
@@ -105,7 +115,7 @@ CREATE TABLE IF NOT EXISTS deliveries (
 CREATE TABLE IF NOT EXISTS returns (
   id INTEGER PRIMARY KEY,
   order_id INTEGER,
-  ticket_number INTEGER,
+  ticket_number INTEGER UNIQUE,
   tracking_number INTEGER,
   start_date TEXT,
   due_date TEXT,

@@ -1,8 +1,8 @@
 import random
 import sqlite3
-import string
+import uuid
 from dataclasses import asdict, dataclass
-from datetime import date, now
+from datetime import date, datetime
 
 import numpy as np
 from faker import Faker
@@ -102,7 +102,7 @@ def generate_sellers(seller_code):
         address=fake.address(),
         name=fake.name(),
         tax_id=fake.ssn(),
-        rating=random.randint(1, 500) / 100,
+        rating=np.random.choice([1, 2, 3, 4, 5], p=[0.05, 0.1, 0.15, 0.3, 0.4]),
     )
     return list(asdict(seller_data).values())
 
@@ -137,10 +137,15 @@ def generate_products(product_id, seller_id):
         + str(random.randint(1, 100))
         + "cm",
         weight=random.randint(1, 100),
-        price=random.randint(1, 1000),
+        price=int(
+            np.random.normal(loc=100, scale=40)
+        ),  # centered around 100 with variation
         n_days_warranty=random.randint(1, 100),
-        category=random.choice(string.ascii_letters),
-        stock_count=random.randint(1, 1000),
+        category=np.random.choice(
+            ["electronics", "fashion", "home", "toys", "books", "beauty", "sports"],
+            p=[0.25, 0.2, 0.15, 0.1, 0.1, 0.1, 0.1],
+        ),
+        stock_count=random.randint(5, 1000),
         seller_id=seller_id,
     )
     return list(asdict(product_data).values())
@@ -158,7 +163,7 @@ def generate_reviews(product_id):
     review_data = ReviewData(
         id=random_with_N_digits(10),
         product_id=product_id,
-        rating=random.randint(1, 5),
+        rating=np.random.choice([1, 2, 3, 4, 5], p=[0.05, 0.1, 0.15, 0.3, 0.4]),
         comment=fake.text(max_nb_chars=100),
     )
     return list(asdict(review_data).values())
@@ -178,24 +183,26 @@ def generate_orders(customer_id, order_id):
         id=order_id,
         customer_id=customer_id,
         order_date=fake.date_between(start_date="-2y", end_date="today"),
-        payment_status=random.choice(["paid", "pending", "cancelled"]),
+        payment_status=np.random.choice(
+            ["paid", "pending", "cancelled"], p=[0.85, 0.1, 0.05]
+        ),
         amount_total=0,  # This will be calculated based on the products in the order
     )
     return list(asdict(order_data).values()), order_id
 
 
 @dataclass
-class BasketData:
+class BasketItemsData:
     customer_id: int
     product_id: int
     quantity: int
 
 
-def generate_baskets(customer_id, product_id):
-    basket_data = BasketData(
+def generate_basket_items(customer_id, product_id):
+    basket_items_data = BasketItemsData(
         customer_id=customer_id, product_id=product_id, quantity=random.randint(1, 10)
     )
-    return list(asdict(basket_data).values())
+    return list(asdict(basket_items_data).values())
 
 
 @dataclass
@@ -207,7 +214,9 @@ class OrderItemData:
 
 def generate_order_items(order_id, product_id):
     order_item_data = OrderItemData(
-        order_id=order_id, product_id=product_id, quantity=random.randint(1, 10)
+        order_id=order_id,
+        product_id=product_id,
+        quantity=int(np.random.choice([1, 2, 3, 4, 5], p=[0.4, 0.3, 0.15, 0.1, 0.05])),
     )
     return list(asdict(order_item_data).values())
 
@@ -246,7 +255,7 @@ def generate_return_data(id, order_id):
         start_date=fake.date_between(start_date="-30d", end_date="today"),
         due_date=fake.date_between(start_date="today", end_date="+30d"),
         refund_total=0.0,
-        status=np.random.choice(["pending", "approved", "rejected"], p=[0.2, 0.7, 0.1]),
+        status=np.random.choice(["pending", "approved", "rejected"], p=[0.1, 0.8, 0.1]),
     )
     return list(asdict(return_data).values())
 
@@ -271,18 +280,38 @@ def generate_return_items_data(return_id, product_id):
 class PaymentData:
     txn_id: int
     order_id: int
+    voucher_serial: str
+    payment_method: str
     amount: float
     status: str
     date: str
 
 
-def generate_payment_data(payment_id, order_id):
+@dataclass
+class GiftCardData:
+    serial: str
+    amount: float
+    customer_id: int
+
+
+def gift_card_data(customer_id):
+    gift_card_data = GiftCardData(
+        serial=str(uuid.uuid4()),
+        amount=random.randint(5, 100),
+        customer_id=customer_id,
+    )
+    return list(asdict(gift_card_data).values())
+
+
+def generate_payment_data(payment_id, order_id, voucher_serial):
     payment_data = PaymentData(
         txn_id=payment_id,
         order_id=order_id,
+        voucher_serial=voucher_serial,
+        payment_method=random.choice(["credit", "debit"]),
         amount=0,  # Will be set based on the order details
         status="pending",
-        date=now().strftime("%Y-%m-%d %H:%M:%S"),
+        date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )
     return list(asdict(payment_data).values())
 
@@ -305,7 +334,9 @@ def main():
 
         # Set the first card as default for simplicity, in reality this would be determined by the customer's preference
         is_default = 1
-        for _ in range(random.randint(1, 5)):
+        for _ in range(
+            np.random.choice(range(0, 6), p=[0.1, 0.2, 0.3, 0.2, 0.15, 0.05])
+        ):
             db.insert_data("cards", generate_cards(customer_id, is_default))
             is_default = 0
 
@@ -320,8 +351,17 @@ def main():
 
             # populate payments
             txn_id = random_with_N_digits(10)
-            payment, payment_id = generate_payment_data(txn_id, order_id)
+            if random.random() < 0.1:
+                voucher_serial = random_with_N_digits(10)
+            else:
+                voucher_serial = None
+            payment = generate_payment_data(txn_id, order_id, voucher_serial)
             db.insert_data("payments", payment)
+
+        # populate gift cards
+        if random.random() < 0.1:
+            gift_card = gift_card_data(customer_id)
+            db.insert_data("vouchers", gift_card)
 
     # populate sellers and products
     for _ in range(10):
@@ -350,7 +390,9 @@ def main():
 
     for customer_id in seen_customer_ids:
         random_product = random.choice(list(seen_product_ids))
-        db.insert_data("basket", generate_baskets(customer_id, random_product))
+        db.insert_data(
+            "basket_items", generate_basket_items(customer_id, random_product)
+        )
 
     # populate order_items
     for customer_id, order_ids in customers_with_orders.items():
@@ -361,8 +403,8 @@ def main():
             ordered_products.append(product_id)
             db.insert_data("order_items", order_items)
 
-            # simulate 20% return rate
-            if random.random() < 0.2:
+            # simulate 10% return rate
+            if random.random() < 0.1:
                 return_id = random_with_N_digits(5)
                 db.insert_data("returns", generate_return_data(return_id, order_id))
                 for product_id in ordered_products:
